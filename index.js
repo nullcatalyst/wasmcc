@@ -3,7 +3,6 @@ global.Promise          = require("bluebird");
 const path              = require("path");
 const fs                = require("fs");
 const { spawn }         = require("child_process");
-
 const tmp               = require("tmp");
 
 const readFile          = Promise.promisify(fs.readFile);
@@ -124,7 +123,7 @@ async function wat2wasm(file, options) {
 
 async function wat2wasmOpt(file, options) {
     const output = options.output;
-    const args = ["-Oz", "-o", output, file];
+    const args = [options.optimize, options.debug ? "-g" : "--vacuum", "-o", output, file];
     await run(options.wasmOpt, args);
     return output;
 }
