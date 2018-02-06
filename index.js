@@ -91,7 +91,7 @@ async function run(program, args) {
 }
 
 async function compile2bc(tmp, file, options) {
-    const output = path.resolve(tmp, replaceExt(file, ".bc"));
+    const output = await tmpFile();
     const args = ["-emit-llvm", "--target=wasm32", "-D__wasm__", ...options.cflags, "-o", output, "-c", file];
     await run(options.clang, args);
     return output;
