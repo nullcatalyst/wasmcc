@@ -20,9 +20,12 @@ const options = {
     wasmDis             : resolve("wasm-dis",   "binaryen", "bin/wasm-dis"),
 };
 
-wasmcc(args._, options);
+if (args._.length > 0) {
+    wasmcc(args._, options);
+} else {
+    console.log("No input files");
+}
 
 function resolve(override, home, subpath) {
-    console.log(path.resolve(args[home] || home, subpath));
     return args[override] || path.resolve(args[home] || home, subpath);
 }
