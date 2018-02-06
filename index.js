@@ -23,13 +23,10 @@ module.exports = async function (cFiles, options) {
         const useStack  = sStr.indexOf("__stack_pointer") >= 0;
 
         const watFile   = await s2wat(sFile, options);
-
-        // Temporary fix between occasionally incompatible systems
         let watStr      = await readFile(watFile, "utf8");
-        watStr          = watStr.replace(/call_indirect \(type (.*)\)/g, "call_indirect $1");
 
         if (useStack) {
-            console.log("Setting stack pointer");
+            // console.log("Setting stack pointer");
 
             watStr = watStr.replace(/\(memory \$0 ([0-9]+)\)/, (match, size) => {
                 const pageCount = (+size + options.stack) | 0;
