@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-global.Promise          = require("bluebird");
-
+global.Promise  = require("bluebird");
 const argv      = process.argv.slice(2);
 const os        = require("os");
 const path      = require("path");
 const fs        = require("fs");
+const readFile  = Promise.promisify(fs.readFile);
 const wasmcc    = require("./index");
 const args      = require("minimist")(argv, {
     string: ["o", "exports", "clang", "wasm-dis", "wasm-opt"],
@@ -20,8 +20,6 @@ const args      = require("minimist")(argv, {
         stack: 1,
     },
 });
-
-const readFile  = Promise.promisify(fs.readFile);
 
 (async function () {
     args.optimize = "-O0";
