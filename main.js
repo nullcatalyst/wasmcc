@@ -3,7 +3,7 @@ global.Promise  = require("bluebird");
 const argv      = process.argv.slice(2);
 const path      = require("path");
 const args      = require("minimist")(argv, {
-    string: ["o", "exports", "clang", "wasm-dis", "wasm-opt", "llvm", "binaryen"],
+    string: ["o", "exports", "clang", "llvm-link", "llc", "s2wasm", "wasm-dis", "wasm-opt", "llvm", "binaryen"],
     boolean: ["O", "s", "z", "debug", "install"],
     alias: {
         o: "output",
@@ -59,6 +59,9 @@ const wasmcc = require("./index");
         exports             : exportList,
         cflags              : process.env.CFLAGS ? process.env.CFLAGS.split(" ") : [],
         clang               : resolve("clang",      "llvm",     "bin/clang"),
+        llvmLink            : resolve("llvm-link",  "llvm",     "bin/llvm-link"),
+        llc                 : resolve("llc",        "llvm",     "bin/llc"),
+        s2wasm              : resolve("s2wasm",     "binaryen", "bin/s2wasm"),
         wasmDis             : resolve("wasm-dis",   "binaryen", "bin/wasm-dis"),
         wasmOpt             : resolve("wasm-opt",   "binaryen", "bin/wasm-opt"),
     };
