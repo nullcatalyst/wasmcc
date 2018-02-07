@@ -1,12 +1,13 @@
 global.Promise  = require("bluebird");
 const path      = require("path");
 
-const { readFile, writeFile, run, replaceExt } = require("./util");
+const { readFile, writeFile, tmpDir, tmpFile, run, replaceExt } = require("./util");
 
 module.exports = async function (cFiles, options) {
     try {
         if (path.extname(options.output) !== ".wasm") options.output += ".wasm";
 
+        const tmp       = await tmpDir();
         const bcFiles   = await Promise.map(cFiles, (file) => compile2bc(tmp, file, options), { concurrency: require("os").cpus().length });
         const bcFile    = await linkbc(bcFiles, options);
         const sFile     = await bc2s(bcFile, options);
@@ -57,7 +58,7 @@ module.exports = async function (cFiles, options) {
 
 async function compile2bc(tmp, file, options) {
     const output = await tmpFile();
-    const args = ["-emit-llvm", "--target=wasm32", "-D__wasm__", ...options.cflags, "-o", output, "-c", file];
+    const args = ["-emit-llvm", "--target=wasm32", "-D__wasm__", options.optimize, ...options.cflags, "-o", output, "-c", file];
     await run(options.clang, args);
     return output;
 }
