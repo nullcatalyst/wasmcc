@@ -1,58 +1,70 @@
 #!/usr/bin/env node
+global.Promise  = require("bluebird");
 const argv      = process.argv.slice(2);
-const os        = require("os");
 const path      = require("path");
-const wasmcc    = require("./index");
 const args      = require("minimist")(argv, {
-    string: ["o", "concurrency"],
-    boolean: ["O", "s", "z", "debug"],
+    string: ["o", "exports", "clang", "wasm-dis", "wasm-opt", "llvm", "binaryen"],
+    boolean: ["O", "s", "z", "debug", "install"],
     alias: {
         o: "output",
         g: "debug",
-        j: "concurrency",
+        x: "exports",
     },
     default: {
         output: "a.out.wasm",
-        concurrency: os.cpus().length,
-        stack: 1,
+        stack: 0,
     },
 });
 
-args.optimize = "-O0";
-for (let arg of argv) {
-    switch (arg) {
-        case "-O0": args.optimize = "-O0"; break;
-        case "-O1": args.optimize = "-O1"; break;
-        case "-O2": args.optimize = "-O2"; break;
-        case "-O3": args.optimize = "-O3"; break;
-        case "-Os": args.optimize = "-Os"; break;
-        case "-Oz": args.optimize = "-Oz"; break;
+const { readFile, run } = require("./util");
+const wasmcc = require("./index");
+
+(async function () {
+    if (args.install) {
+        process.chdir(__dirname);
+        return run("install.sh", [], true);
     }
-}
 
-const cflags = process.env.CFLAGS ? process.env.CFLAGS.split(" ") : [];
-if (args.optimize) cflags.unshift(args.optimize);
+    // Early exit (no input files)
+    if (args._.length === 0) {
+        console.log("No input files");
+        return;
+    }
 
-const options = {
-    output              : args.output,
-    stack               : parseInt(args.stack, 10) || 1,
-    concurrency         : parseInt(args.concurrency, 10) || 1,
-    debug               : !!args.debug,
-    optimize            : args.optimize,
-    cflags              : cflags,
-    clang               : resolve("clang",      "llvm",     "bin/clang"),
-    llvmLink            : resolve("llvm-link",  "llvm",     "bin/llvm-link"),
-    llc                 : resolve("llc",        "llvm",     "bin/llc"),
-    s2wasm              : resolve("s2wasm",     "binaryen", "bin/s2wasm"),
-    wasmOpt             : resolve("wasm-opt",   "binaryen", "bin/wasm-opt"),
-    wasmDis             : resolve("wasm-dis",   "binaryen", "bin/wasm-dis"),
-};
+    // Find the optimize flag (not supported by minimist)
+    args.optimize = "-O0";
+    for (let arg of argv) {
+        switch (arg) {
+            case "-O0": args.optimize = "-O0"; break;
+            case "-O1": args.optimize = "-O1"; break;
+            case "-O2": args.optimize = "-O2"; break;
+            case "-O3": args.optimize = "-O3"; break;
+            case "-Os": args.optimize = "-Os"; break;
+            case "-Oz": args.optimize = "-Oz"; break;
+        }
+    }
 
-if (args._.length > 0) {
-    wasmcc(args._, options);
-} else {
-    console.log("No input files");
-}
+    // Load the list of exported functions
+    let exportList = null;
+    if (args.exports) {
+        const exportsStr = await readFile(path.resolve(args.exports), "utf8");
+        exportList = JSON.parse(exportsStr);
+    }
+
+    const options = {
+        output              : args.output,
+        stack               : parseInt(args.stack, 10) || 0,
+        debug               : !!args.debug,
+        optimize            : args.optimize,
+        exports             : exportList,
+        cflags              : process.env.CFLAGS ? process.env.CFLAGS.split(" ") : [],
+        clang               : resolve("clang",      "llvm",     "bin/clang"),
+        wasmDis             : resolve("wasm-dis",   "binaryen", "bin/wasm-dis"),
+        wasmOpt             : resolve("wasm-opt",   "binaryen", "bin/wasm-opt"),
+    };
+
+    return wasmcc(args._, options);
+})();
 
 function resolve(override, home, subpath) {
     return args[override] || path.resolve(args[home] || home, subpath);
