@@ -1,32 +1,27 @@
-global.Promise          = require("bluebird");
+global.Promise  = require("bluebird");
 
-const path              = require("path");
-const fs                = require("fs");
-const { spawn }         = require("child_process");
-const tmp               = require("tmp");
+const path      = require("path");
+const fs        = require("fs");
+const { spawn } = require("child_process");
+const tmp       = require("tmp");
 
-const readFile          = Promise.promisify(fs.readFile);
-const writeFile         = Promise.promisify(fs.writeFile);
-const tmpDir            = Promise.promisify(tmp.dir);
-const tmpFile           = Promise.promisify(tmp.file);
+const readFile  = Promise.promisify(fs.readFile);
+const writeFile = Promise.promisify(fs.writeFile);
+const tmpDir    = Promise.promisify(tmp.dir);
+const tmpFile   = Promise.promisify(tmp.file);
 
 module.exports = async function (cFiles, options) {
     try {
+        if (path.extname(options.output) !== ".wasm") options.output += ".wasm";
+
         const tmp       = await tmpDir();
-    
-        const bcFiles   = await Promise.map(cFiles, (file) => compile2bc(tmp, file, options), { concurrency: options.concurrency });
-        const bcFile    = await linkbc(bcFiles, options);
-        const sFile     = await bc2s(bcFile, options);
 
-        const sStr      = await readFile(sFile, "utf8");
-        const useStack  = sStr.indexOf("__stack_pointer") >= 0;
+        const wasm1File = await compile2wasm(cFiles, options);
 
-        const watFile   = await s2wat(sFile, options);
+        const watFile   = await wasm2wat(wasm1File, options);
         let watStr      = await readFile(watFile, "utf8");
 
-        if (useStack) {
-            // console.log("Setting stack pointer");
-
+        if (options.stack > 0) {
             watStr = watStr.replace(/\(memory \$0 ([0-9]+)\)/, (match, size) => {
                 const pageCount = (+size + options.stack) | 0;
                 const pageSize = 64 * 1024; // 64kb
@@ -42,10 +37,20 @@ module.exports = async function (cFiles, options) {
             });
         }
 
+        if (options.exports) {
+            watStr = watStr.replace(/\(export "(.+?)" \(.*?\)\)/g, (match, exportName) => {
+                if (options.exports.indexOf(exportName) >= 0) {
+                    return match;
+                } else {
+                    return `(; ${match} ;)`;
+                }
+            });
+        }
+
         await writeFile(watFile, watStr);
 
         const wasmFile  = await wat2wasmOpt(watFile, options);
-        const owatFile  = await wasm2wat(wasmFile, options);
+        // const owatFile  = await wasm2wat(wasmFile, options);
     } catch (error) {
         console.error(error);
     }
@@ -78,7 +83,7 @@ async function run(program, args) {
         });
 
         child.stdout.on("data", (data) => {
-            console.log(data.toString());
+            console.log(name + ":", data.toString());
         });
 
         child.stderr.on("data", (data) => {
@@ -87,51 +92,23 @@ async function run(program, args) {
     });
 }
 
-async function compile2bc(tmp, file, options) {
-    const output = await tmpFile();
-    const args = ["-emit-llvm", "--target=wasm32", "-D__wasm__", ...options.cflags, "-o", output, "-c", file];
+async function compile2wasm(files, options) {
+    const output = options.output;//await tmpFile();
+    const args = ["--target=wasm32-unknown-unknown-wasm", "-nostdlib", "-D__wasm__", options.optimize, ...options.cflags, "-r", "-o", output, ...files];
     await run(options.clang, args);
     return output;
 }
 
-async function linkbc(files, options) {
-    const output = await tmpFile();
-    const args = ["-o", output, ...files];
-    await run(options.llvmLink, args);
-    return output;
-}
-
-async function bc2s(file, options) {
-    const output = await tmpFile();
-    const args = ["-asm-verbose=false", "-o", output, file];
-    await run(options.llc, args);
-    return output;
-}
-
-async function s2wat(file, options) {
+async function wasm2wat(file, options) {
     const output = replaceExt(options.output, ".wat");
-    const args = ["--no-export-hidden", "-o", output, file];
-    await run(options.s2wasm, args);
-    return output;
-}
-
-async function wat2wasm(file, options) {
-    const output = options.output;
     const args = ["-o", output, file];
-    await run(options.wat2wasm, args);
+    await run(options.wasmDis, args);
     return output;
 }
 
 async function wat2wasmOpt(file, options) {
-    const output = options.output;
-    const args = [options.optimize, options.debug ? "-g" : "--vacuum", "-o", output, file];
+    const output = replaceExt(options.output, ".opt.wasm");//options.output
+    const args = [options.optimize, ...(options.debug ? ["-g"] : ["--vacuum", "--reorder-functions", "--reorder-locals"]), "-o", output, file];
     await run(options.wasmOpt, args);
-    return output;
-}
-
-async function wasm2wat(file, options) {
-    const output = replaceExt(options.output, ".opt.wat");
-    const args = ["-o", output, file];
-    await run(options.wasmDis, args);
     return output;
 }

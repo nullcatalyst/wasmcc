@@ -1,15 +1,18 @@
 #!/usr/bin/env node
+global.Promise          = require("bluebird");
+
 const argv      = process.argv.slice(2);
 const os        = require("os");
 const path      = require("path");
+const fs        = require("fs");
 const wasmcc    = require("./index");
 const args      = require("minimist")(argv, {
-    string: ["o", "concurrency"],
+    string: ["o", "exports", "clang", "wasm-dis", "wasm-opt"],
     boolean: ["O", "s", "z", "debug"],
     alias: {
         o: "output",
         g: "debug",
-        j: "concurrency",
+        x: "exports",
     },
     default: {
         output: "a.out.wasm",
@@ -18,41 +21,45 @@ const args      = require("minimist")(argv, {
     },
 });
 
-args.optimize = "-O0";
-for (let arg of argv) {
-    switch (arg) {
-        case "-O0": args.optimize = "-O0"; break;
-        case "-O1": args.optimize = "-O1"; break;
-        case "-O2": args.optimize = "-O2"; break;
-        case "-O3": args.optimize = "-O3"; break;
-        case "-Os": args.optimize = "-Os"; break;
-        case "-Oz": args.optimize = "-Oz"; break;
+const readFile  = Promise.promisify(fs.readFile);
+
+(async function () {
+    args.optimize = "-O0";
+    for (let arg of argv) {
+        switch (arg) {
+            case "-O0": args.optimize = "-O0"; break;
+            case "-O1": args.optimize = "-O1"; break;
+            case "-O2": args.optimize = "-O2"; break;
+            case "-O3": args.optimize = "-O3"; break;
+            case "-Os": args.optimize = "-Os"; break;
+            case "-Oz": args.optimize = "-Oz"; break;
+        }
     }
-}
 
-const cflags = process.env.CFLAGS ? process.env.CFLAGS.split(" ") : [];
-if (args.optimize) cflags.unshift(args.optimize);
+    let exports = null;
+    if (args.exports) {
+        const exportsStr = await readFile(path.resolve(args.exports), "utf8");
+        exports = JSON.parse(exportsStr);
+    }
 
-const options = {
-    output              : args.output,
-    stack               : parseInt(args.stack, 10) || 1,
-    concurrency         : parseInt(args.concurrency, 10) || 1,
-    debug               : !!args.debug,
-    optimize            : args.optimize,
-    cflags              : cflags,
-    clang               : resolve("clang",      "llvm",     "bin/clang"),
-    llvmLink            : resolve("llvm-link",  "llvm",     "bin/llvm-link"),
-    llc                 : resolve("llc",        "llvm",     "bin/llc"),
-    s2wasm              : resolve("s2wasm",     "binaryen", "bin/s2wasm"),
-    wasmOpt             : resolve("wasm-opt",   "binaryen", "bin/wasm-opt"),
-    wasmDis             : resolve("wasm-dis",   "binaryen", "bin/wasm-dis"),
-};
+    const options = {
+        output              : args.output,
+        stack               : parseInt(args.stack, 10) || 0,
+        debug               : !!args.debug,
+        optimize            : args.optimize,
+        exports             : exports,
+        cflags              : process.env.CFLAGS ? process.env.CFLAGS.split(" ") : [],
+        clang               : resolve("clang",      "llvm",     "bin/clang"),
+        wasmDis             : resolve("wasm-dis",   "binaryen", "bin/wasm-dis"),
+        wasmOpt             : resolve("wasm-opt",   "binaryen", "bin/wasm-opt"),
+    };
 
-if (args._.length > 0) {
-    wasmcc(args._, options);
-} else {
-    console.log("No input files");
-}
+    if (args._.length > 0) {
+        wasmcc(args._, options);
+    } else {
+        console.log("No input files");
+    }
+})();
 
 function resolve(override, home, subpath) {
     return args[override] || path.resolve(args[home] || home, subpath);
