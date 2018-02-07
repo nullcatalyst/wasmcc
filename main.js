@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 global.Promise  = require("bluebird");
 const argv      = process.argv.slice(2);
-const os        = require("os");
 const path      = require("path");
-const fs        = require("fs");
-const readFile  = Promise.promisify(fs.readFile);
-const wasmcc    = require("./index");
 const args      = require("minimist")(argv, {
-    string: ["o", "exports", "clang", "wasm-dis", "wasm-opt"],
-    boolean: ["O", "s", "z", "debug"],
+    string: ["o", "exports", "clang", "wasm-dis", "wasm-opt", "llvm", "binaryen"],
+    boolean: ["O", "s", "z", "debug", "install"],
     alias: {
         o: "output",
         g: "debug",
@@ -16,12 +12,26 @@ const args      = require("minimist")(argv, {
     },
     default: {
         output: "a.out.wasm",
-        concurrency: os.cpus().length,
-        stack: 1,
+        stack: 0,
     },
 });
 
+const { readFile, run } = require("./util");
+const wasmcc = require("./index");
+
 (async function () {
+    if (args.install) {
+        process.chdir(__dirname);
+        return run("install.sh", [], true);
+    }
+
+    // Early exit (no input files)
+    if (args._.length === 0) {
+        console.log("No input files");
+        return;
+    }
+
+    // Find the optimize flag (not supported by minimist)
     args.optimize = "-O0";
     for (let arg of argv) {
         switch (arg) {
@@ -34,10 +44,11 @@ const args      = require("minimist")(argv, {
         }
     }
 
-    let exports = null;
+    // Load the list of exported functions
+    let exportList = null;
     if (args.exports) {
         const exportsStr = await readFile(path.resolve(args.exports), "utf8");
-        exports = JSON.parse(exportsStr);
+        exportList = JSON.parse(exportsStr);
     }
 
     const options = {
@@ -45,18 +56,14 @@ const args      = require("minimist")(argv, {
         stack               : parseInt(args.stack, 10) || 0,
         debug               : !!args.debug,
         optimize            : args.optimize,
-        exports             : exports,
+        exports             : exportList,
         cflags              : process.env.CFLAGS ? process.env.CFLAGS.split(" ") : [],
         clang               : resolve("clang",      "llvm",     "bin/clang"),
         wasmDis             : resolve("wasm-dis",   "binaryen", "bin/wasm-dis"),
         wasmOpt             : resolve("wasm-opt",   "binaryen", "bin/wasm-opt"),
     };
 
-    if (args._.length > 0) {
-        wasmcc(args._, options);
-    } else {
-        console.log("No input files");
-    }
+    return wasmcc(args._, options);
 })();
 
 function resolve(override, home, subpath) {

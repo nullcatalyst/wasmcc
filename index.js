@@ -1,9 +1,7 @@
 global.Promise  = require("bluebird");
-const { spawn } = require("child_process");
 const path      = require("path");
-const fs        = require("fs");
-const readFile  = Promise.promisify(fs.readFile);
-const writeFile = Promise.promisify(fs.writeFile);
+
+const { readFile, writeFile, run, replaceExt } = require("./util");
 
 module.exports = async function (cFiles, options) {
     try {
@@ -47,42 +45,6 @@ module.exports = async function (cFiles, options) {
     } catch (error) {
         console.error(error);
     }
-}
-
-function replaceExt(file, ext) {
-    const currExt = path.extname(file);
-    if (currExt) {
-        file = file.slice(0, file.lastIndexOf(currExt))
-    }
-
-    return file + ext;
-}
-
-async function run(program, args) {
-    return new Promise((resolve, reject) => {
-        const name = path.basename(program);
-        const child = spawn(program, args);
-
-        child.on("error", (error) => {
-            reject(error);
-        });
-
-        child.on("exit", (code, signal) => {
-            if (code === 0) {
-                resolve();
-            } else {
-                reject();
-            }
-        });
-
-        child.stdout.on("data", (data) => {
-            console.log(name + ":", data.toString());
-        });
-
-        child.stderr.on("data", (data) => {
-            console.error(name + ":", data.toString());
-        });
-    });
 }
 
 async function compile2wasm(files, options) {
