@@ -62,6 +62,7 @@ function replaceExt(file, ext) {
 
 async function run(program, args) {
     return new Promise((resolve, reject) => {
+        const name = path.basename(program);
         const child = spawn(program, args);
 
         child.on("error", (error) => {
@@ -81,7 +82,7 @@ async function run(program, args) {
         });
 
         child.stderr.on("data", (data) => {
-            console.error(data.toString());
+            console.error(name + ":", data.toString());
         });
     });
 }
