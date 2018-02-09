@@ -27,7 +27,7 @@ svn co http://llvm.org/svn/llvm-project/lld/trunk lld
 mkdir -p $WORKDIR/llvm-build
 cd $WORKDIR/llvm-build
 # For Debug build:
-cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=$INSTALLDIR -DLLVM_TARGETS_TO_BUILD= -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly -DCMAKE_BUILD_TYPE=Release $WORKDIR/llvm
+cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=$INSTALLDIR -DLLVM_TARGETS_TO_BUILD="" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly -DCMAKE_BUILD_TYPE=Release -DLLVM_INCLUDE_EXAMPLES=OFF $WORKDIR/llvm
 make -j 8
 
 # install llvm
