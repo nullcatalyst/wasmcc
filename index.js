@@ -49,7 +49,7 @@ module.exports = async function (cFiles, options) {
 
 async function compile2wasm(files, options) {
     const output = options.output;
-    const args = ["--target=wasm32-unknown-unknown-wasm", "-nostdlib", "-D__wasm__", options.optimize, ...options.cflags, "-r", "-o", output, ...files];
+    const args = ["--target=wasm32-unknown-unknown-wasm", "-nostdlib", "-D__wasm__", options.optimize, ...options.cflags, ...options.cxxflags, "-r", "-o", output, ...files];
     await run(options.clang, args);
     return output;
 }

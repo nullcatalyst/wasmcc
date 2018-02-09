@@ -58,6 +58,7 @@ const wasmcc = require("./index");
         optimize            : args.optimize,
         exports             : exportList,
         cflags              : process.env.CFLAGS ? process.env.CFLAGS.split(" ") : [],
+        cxxflags            : process.env.CXXFLAGS ? process.env.CXXFLAGS.split(" ") : [],
         clang               : resolve("clang",      "llvm",     "bin/clang"),
         wasmDis             : resolve("wasm-dis",   "binaryen", "bin/wasm-dis"),
         wasmOpt             : resolve("wasm-opt",   "binaryen", "bin/wasm-opt"),
