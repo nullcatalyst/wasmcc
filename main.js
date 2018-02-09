@@ -22,7 +22,7 @@ const wasmcc = require("./index");
 (async function () {
     if (args.install) {
         process.chdir(__dirname);
-        return run("install.sh", [], true);
+        return run("bash", ["install.sh"], true);
     }
 
     // Early exit (no input files)
