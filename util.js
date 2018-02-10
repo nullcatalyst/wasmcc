@@ -13,6 +13,7 @@ module.exports = {
     replaceExt,
 };
 
+let prevRunProgram = null;
 async function run(program, args, pipe) {
     return new Promise((resolve, reject) => {
         const name = path.basename(program);
@@ -35,8 +36,20 @@ async function run(program, args, pipe) {
             child.stderr.pipe(process.stderr);
             process.stdin.pipe(child.stdin);
         } else {
-            child.stdout.on("data", (data) => console.log(name + ":", data.toString()));
-            child.stderr.on("data", (data) => console.error(name + ":", data.toString()));
+            child.stdout.on("data", (data) => {
+                if (prevRunProgram !== name) {
+                    prevRunProgram = name;
+                    console.log("#", name);
+                }
+                console.log(data.toString());
+            });
+            child.stderr.on("data", (data) => {
+                if (prevRunProgram !== name) {
+                    prevRunProgram = name;
+                    console.error("#", name);
+                }
+                console.error(data.toString());
+            });
         }
     });
 }
