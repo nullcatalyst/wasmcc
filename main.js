@@ -22,7 +22,7 @@ const wasmcc = require("./index");
 (async function () {
     if (args.install) {
         process.chdir(__dirname);
-        return run("install.sh", [], true);
+        return run("bash", ["install.sh"], true);
     }
 
     // Early exit (no input files)
@@ -68,5 +68,8 @@ const wasmcc = require("./index");
 })();
 
 function resolve(override, home, subpath) {
-    return args[override] || path.resolve(args[home] || home, subpath);
+    return (
+        args[override] ||
+        (args[home] ? path.resolve(args[home], subpath) : path.resolve(__dirname, home, subpath))
+    );
 }
