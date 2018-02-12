@@ -51,16 +51,16 @@ const wasmcc = require("./index");
     }
 
     const options = {
-        output              : args.output,
-        stack               : parseInt(args.stack, 10) || 0,
-        debug               : !!args.debug,
-        optimize            : args.optimize,
-        exports             : exportList,
-        cflags              : process.env.CFLAGS ? process.env.CFLAGS.split(" ") : [],
-        cxxflags            : process.env.CXXFLAGS ? process.env.CXXFLAGS.split(" ") : [],
-        clang               : resolve("clang",      "llvm",     "bin/clang") + (process.argv[1] === "wasmcpp" ? "++" : ""),
-        wasmDis             : resolve("wasm-dis",   "binaryen", "bin/wasm-dis"),
-        wasmOpt             : resolve("wasm-opt",   "binaryen", "bin/wasm-opt"),
+        output      : args.output,
+        stack       : parseInt(args.stack, 10) || 0,
+        debug       : !!args.debug,
+        optimize    : args.optimize,
+        exports     : exportList,
+        cflags      : process.env.CFLAGS ? process.env.CFLAGS.split(" ") : [],
+        cxxflags    : process.env.CXXFLAGS ? process.env.CXXFLAGS.split(" ") : [],
+        clang       : resolve("clang",      "llvm",     "bin/clang") + (process.argv[1] === "wasmcpp" ? "++" : ""),
+        wasmDis     : resolve("wasm-dis",   "binaryen", "bin/wasm-dis"),
+        wasmOpt     : resolve("wasm-opt",   "binaryen", "bin/wasm-opt"),
     };
 
     return wasmcc(args._, options);

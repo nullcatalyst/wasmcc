@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 BASEDIR=$PWD
+CONCURRENCY=`getconf _NPROCESSORS_ONLN`
 
 ###############################
 #      Install LLVM(WASM)     #
@@ -23,7 +24,7 @@ git clone https://github.com/llvm-mirror/lld.git # checkout lld
 mkdir -p $LLVMDIR/build
 cd $LLVMDIR/build
 
-cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=$LLVMDIR -DLLVM_TARGETS_TO_BUILD="" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly -DCMAKE_BUILD_TYPE=Release -DLLVM_INCLUDE_EXAMPLES=OFF $LLVMDIR/llvm && make -j 8
+cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=$LLVMDIR -DLLVM_TARGETS_TO_BUILD="" -DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=WebAssembly -DCMAKE_BUILD_TYPE=Release -DLLVM_INCLUDE_EXAMPLES=OFF $LLVMDIR/llvm && make -j $CONCURRENCY
 
 # install llvm
 make install
@@ -38,6 +39,8 @@ make install
 cd $BASEDIR
 git clone https://github.com/WebAssembly/binaryen.git
 cd $BASEDIR/binaryen
-cmake . && make -j 8
+cmake . && make -j $CONCURRENCY
 
 ###############################
+
+exit

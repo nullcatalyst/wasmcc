@@ -24,7 +24,7 @@ async function run(program, args, pipe) {
             if (code === 0) {
                 resolve();
             } else {
-                reject();
+                reject(`Program ${name} exited with: ${signal}`);
             }
         });
 

@@ -11,22 +11,22 @@ module.exports = async function (cFiles, options) {
         let watStr      = await readFile(wat1File, "utf8");
 
         // Update the memory size, adding in the size of the stack
-        if (options.stack > 0) {
+        // if (options.stack > 0) {
+            let pageCount = 0;
             // Increase the memory size to incorporate the stack
             watStr = watStr.replace(/\(memory \$0 ([0-9]+)\)/, (match, size) => {
-                const pageCount = (+size + options.stack) | 0;
+                pageCount = (+size + options.stack) | 0;
                 return `(memory $0 ${pageCount})`;
             });
+        // }
 
-            // Replace the `__stack_pointer` import with an assigned value
-            watStr = watStr.replace(/\(import "env" "__stack_pointer" \((.*?)\)\)/, (match, stackPtr) => {
-                const pageCount = (+size + options.stack) | 0;
-                const pageSize = 64 * 1024; // 64kb
-                const stackInt = (pageCount * pageSize - 1) | 0;
+        // Replace the `__stack_pointer` import with an assigned value
+        watStr = watStr.replace(/\(import "env" "__stack_pointer" \(global (.*?) (.*?)\)\)/, (match, stackPtr, type) => {
+            const pageSize = 64 * 1024; // 64kb
+            const stackInt = (pageCount * pageSize - 1) | 0;
 
-                return `(${stackPtr} (i32.const ${stackInt}))`
-            });
-        }
+            return `(${stackPtr} (mut ${type}) (i32.const ${stackInt}))`;
+        });
 
         // Comment out any unnecessary exports
         if (options.exports) {
@@ -34,22 +34,22 @@ module.exports = async function (cFiles, options) {
                 if (options.exports.indexOf(exportName) >= 0) {
                     return match;
                 } else {
-                    return `(; ${match} ;)`;
+                    return ``;
                 }
             });
         }
 
         await writeFile(wat1File, watStr);
 
-        const wasm2File = await wat2wasmOpt(wat1File, options, replaceExt(options.output, ".opt.wasm"));
-        const wat2File  = await wasm2wat(wasm2File, options, replaceExt(options.output, ".opt.wat"));
+        const wasm3File = await wat2wasmOpt(wasm2File, options, replaceExt(options.output, ".opt.wasm"));
+        const wat2File  = await wasm2wat(wasm3File, options, replaceExt(options.output, ".opt.wat"));
     } catch (error) {
-        console.error(error);
+        console.error("Error:", error);
     }
 }
 
 async function compile2wasm(files, options, output) {
-    output = output || options.output;
+    output = output || replaceExt(options.output, ".wasm");
     const args = ["--target=wasm32-unknown-unknown-wasm", "-nostdlib", "-D__wasm__", options.optimize, ...options.cflags, ...options.cxxflags, "-r", "-o", output, ...files];
     await run(options.clang, args);
     return output;
