@@ -1,5 +1,4 @@
-global.Promise  = require("bluebird");
-const path      = require("path");
+const path = require("path");
 
 const { readFile, writeFile, run, replaceExt } = require("./util");
 
@@ -13,18 +12,19 @@ module.exports = async function (cFiles, options) {
 
         // Update the memory size, adding in the size of the stack
         if (options.stack > 0) {
+            // Increase the memory size to incorporate the stack
             watStr = watStr.replace(/\(memory \$0 ([0-9]+)\)/, (match, size) => {
+                const pageCount = (+size + options.stack) | 0;
+                return `(memory $0 ${pageCount})`;
+            });
+
+            // Replace the `__stack_pointer` import with an assigned value
+            watStr = watStr.replace(/\(import "env" "__stack_pointer" \((.*?)\)\)/, (match, stackPtr) => {
                 const pageCount = (+size + options.stack) | 0;
                 const pageSize = 64 * 1024; // 64kb
                 const stackInt = (pageCount * pageSize - 1) | 0;
-                const stackStr = ("00000000" + stackInt.toString(16)).slice(-8);
 
-                const a = stackStr.slice(6, 8);
-                const b = stackStr.slice(4, 6);
-                const c = stackStr.slice(2, 4);
-                const d = stackStr.slice(0, 2);
-
-                return `(memory $0 ${pageCount})\n (data (i32.const 4) "\\${a}\\${b}\\${c}\\${d}")`;
+                return `(${stackPtr} (i32.const ${stackInt}))`
             });
         }
 

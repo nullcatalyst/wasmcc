@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-global.Promise  = require("bluebird");
-const argv      = process.argv.slice(2);
-const path      = require("path");
-const args      = require("minimist")(argv, {
+const argv = process.argv.slice(2);
+const path = require("path");
+const args = require("minimist")(argv, {
     string: ["o", "exports", "clang", "wasm-dis", "wasm-opt", "llvm", "binaryen"],
     boolean: ["O", "s", "z", "debug", "install"],
     alias: {

@@ -1,11 +1,11 @@
-global.Promise  = require("bluebird");
-const fs        = require("fs");
-const path      = require("path");
+const fs = require("fs");
+const path = require("path");
 const { spawn } = require("child_process");
+const { promisify } = require("util");
 
 module.exports = {
-    readFile    : Promise.promisify(fs.readFile),
-    writeFile   : Promise.promisify(fs.writeFile),
+    readFile    : promisify(fs.readFile),
+    writeFile   : promisify(fs.writeFile),
     run,
     replaceExt,
 };
