@@ -8,8 +8,8 @@ module.exports = async function (cFiles, options) {
         if (path.extname(options.output) !== ".wasm") options.output += ".wasm";
 
         const wasm1File = await compile2wasm(cFiles, options);
-        const watFile   = await wasm2wat(wasm1File, options);
-        let watStr      = await readFile(watFile, "utf8");
+        const wat1File  = await wasm2wat(wasm1File, options);
+        let watStr      = await readFile(wat1File, "utf8");
 
         // Update the memory size, adding in the size of the stack
         if (options.stack > 0) {
@@ -39,30 +39,31 @@ module.exports = async function (cFiles, options) {
             });
         }
 
-        await writeFile(watFile, watStr);
+        await writeFile(wat1File, watStr);
 
-        const wasmFile  = await wat2wasmOpt(watFile, options);
+        const wasm2File = await wat2wasmOpt(wat1File, options, replaceExt(options.output, ".opt.wasm"));
+        const wat2File  = await wasm2wat(wasm2File, options, replaceExt(options.output, ".opt.wat"));
     } catch (error) {
         console.error(error);
     }
 }
 
-async function compile2wasm(files, options) {
-    const output = options.output;
+async function compile2wasm(files, options, output) {
+    output = output || options.output;
     const args = ["--target=wasm32-unknown-unknown-wasm", "-nostdlib", "-D__wasm__", options.optimize, ...options.cflags, ...options.cxxflags, "-r", "-o", output, ...files];
     await run(options.clang, args);
     return output;
 }
 
-async function wasm2wat(file, options) {
-    const output = replaceExt(options.output, ".wat");
+async function wasm2wat(file, options, output) {
+    output = output || replaceExt(options.output, ".wat");
     const args = ["-o", output, file];
     await run(options.wasmDis, args);
     return output;
 }
 
-async function wat2wasmOpt(file, options) {
-    const output = options.output;
+async function wat2wasmOpt(file, options, output) {
+    output = output || replaceExt(options.output, ".wasm");
     const args = [options.optimize, ...(options.debug ? ["-g"] : ["--reorder-functions", "--reorder-locals", "--vacuum"]), "-o", output, file];
     await run(options.wasmOpt, args);
     return output;
