@@ -16,7 +16,7 @@ module.exports = async function (cFiles, options) {
             // Increase the memory size to incorporate the stack
             watStr = watStr.replace(/\(memory \$0 ([0-9]+)\)/, (match, size) => {
                 pageCount = (+size + options.stack) | 0;
-                return `(memory $0 ${pageCount})`;
+                return `(memory $0 ${pageCount})\n (export "memory" (memory $0))`;
             });
         // }
 
@@ -25,7 +25,7 @@ module.exports = async function (cFiles, options) {
             const pageSize = 64 * 1024; // 64kb
             const stackInt = (pageCount * pageSize - 1) | 0;
 
-            return `(${stackPtr} (mut ${type}) (i32.const ${stackInt}))`;
+            return `(global ${stackPtr} (mut ${type}) (i32.const ${stackInt}))`;
         });
 
         // Comment out any unnecessary exports
@@ -41,8 +41,8 @@ module.exports = async function (cFiles, options) {
 
         await writeFile(wat1File, watStr);
 
-        const wasm3File = await wat2wasmOpt(wasm2File, options, replaceExt(options.output, ".opt.wasm"));
-        const wat2File  = await wasm2wat(wasm3File, options, replaceExt(options.output, ".opt.wat"));
+        const wasm2File = await wat2wasmOpt(wat1File, options);
+        const wat2File  = await wasm2wat(wasm2File, options);
     } catch (error) {
         console.error("Error:", error);
     }
